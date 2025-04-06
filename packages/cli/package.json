@@ -1,5 +1,5 @@
 {
-  "name": "@doko-js/cli",
+  "name": "@sealance-io/doko-js-cli",
   "description": "DokoJS CLI tool",
   "version": "1.0.0",
   "main": "dist/index.js",
@@ -14,7 +14,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/venture23-aleo/doko-js.git"
+    "url": "git+https://github.com/sealance-io/doko-js.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "dependencies": {
+      "@doko-js/core": "^1.0.0", 
+      "@doko-js/utils": "^1.0.0",
+      "@doko-js/wasm": "^1.0.0"
+    }
   },
   "keywords": [
     "doko",

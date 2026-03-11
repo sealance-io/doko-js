@@ -175,9 +175,8 @@ export function GenerateExternalRecordConversionStatement(
 // Resolve import return types
 // Some return types are referenced by import file
 // Eg: token.leo/token.record
-export function FormatLeoDataType(type: string) {
-  if (type.includes('/')) type = type.split('/')[1];
-  return type;
+export function FormatLeoDataType(type: string): string {
+  return type.replace(/\b[a-zA-Z_][a-zA-Z0-9_]*\.aleo\//g, '');
 }
 
 export function GenerateZkRunCode(transitionName: string) {

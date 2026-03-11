@@ -12,7 +12,8 @@ import {
   IsLeoArray,
   MappingDefinition,
   IsLeoExternalRecord,
-  getNestedType
+  getNestedType,
+  IsLeoExternalStruct
 } from '@/utils/aleo-utils';
 import { TSInterfaceGenerator } from '@/generator/ts-interface-generator';
 import { ZodObjectGenerator } from '@/generator/zod-object-generator';
@@ -242,6 +243,47 @@ class Generator {
       )
       .join('\n');
   }
+  private generateExternalStructImports(): string {
+    const externalStructs = new Set(
+      this.refl.functions.flatMap((f) => {
+        return f.inputs
+          .map((i) => i.val)
+          .filter((i) => !i.endsWith('future'))
+          .filter((input) => IsLeoExternalStruct(input));
+      })
+    );
+
+    const imports = Array.from(externalStructs).flatMap<{
+      type: string;
+      from: string;
+    }>((externalStruct) => {
+      const parts = externalStruct.split('.aleo/');
+      const programName = parts[0].replace(/^\[+/, '');
+      const structName = getNestedType(
+        FormatLeoDataType(externalStruct).split('.')[0]
+      )[0];
+
+      return [
+        { type: structName, from: `./types/${programName}` },
+        {
+          type: GetConverterFunctionName(structName, 'leo'),
+          from: `./js2leo/${programName}`
+        }
+      ];
+    });
+
+    const grouppedImports: Map<string, Array<string>> = new Map();
+
+    imports.forEach(({ type, from }) => {
+      const arr = grouppedImports.get(from) || [];
+      arr.push(type);
+      grouppedImports.set(from, arr);
+    });
+
+    return Array.from(grouppedImports.entries())
+      .map((entry) => GenerateTSImport(entry[1], entry[0]))
+      .join('\n');
+  }
 
   private generateConverterFunction(
     customType: StructDefinition,
@@ -452,10 +494,9 @@ class Generator {
 
         // cast non-custom datatype to string
         const type = formattedOutput.split('.')[0];
-        const [nestedType, depth] = getNestedType(type)
+        const [nestedType, depth] = getNestedType(type);
         const isRecordType = this.refl.isRecordType(type);
-        const isExternalRecord =
-          output.includes('.aleo/') && output.includes('.record');
+        const isExternalRecord = IsLeoExternalRecord(output);
         const externaleRecordParts = output
           .replace('.record', '')
           .split('.aleo/');
@@ -644,6 +685,7 @@ class Generator {
       );
     }
     code = code.concat(this.generateExternalRecordImports(), '\n');
+    code = code.concat(this.generateExternalStructImports(), '\n');
 
     code = code.concat(
       GenerateTSImport(

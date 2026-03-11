@@ -104,7 +104,11 @@ const IsLeoArray = (type: string) => {
 };
 
 const IsLeoExternalRecord = (type: string) => {
-  return type.includes('.aleo/') && !type.includes('.future');
+  return type.includes('.aleo/') && type.includes('.record');
+};
+
+const IsLeoExternalStruct = (type: string) => {
+  return type.includes('.aleo/') && !type.includes('.record');
 };
 
 const extractArraySizes = (type: string) => {
@@ -177,6 +181,7 @@ export {
   getNestedType,
   IsLeoPrimitiveType,
   IsLeoExternalRecord,
+  IsLeoExternalStruct,
   trimAleoPostfix,
   ExternalRecord,
   KEYWORDS,

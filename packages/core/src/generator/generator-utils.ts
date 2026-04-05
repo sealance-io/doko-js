@@ -3,10 +3,11 @@ import {
   GetLeoArrTypeAndSize,
   getNestedType,
   IsLeoArray,
+  IsLeoExternalStruct,
   IsLeoPrimitiveType,
   IsLeoExternalRecord
 } from '@/utils/aleo-utils';
-import { GetConverterFunctionName } from './leo-naming';
+import { GetConverterFunctionName, GetExternalStructAlias } from './leo-naming';
 import { DokoJSError, ERRORS } from '@doko-js/utils';
 import { STRING_JS } from './string-constants';
 
@@ -170,6 +171,16 @@ export function GenerateExternalRecordConversionStatement(
   } else {
     return `js2leo.json(${program}_${GetConverterFunctionName(record, 'leo')}(${value}))`;
   }
+}
+
+export function AliasExternalStructDataType(type: string): string {
+  if (!IsLeoExternalStruct(type)) return type;
+
+  return type.replace(
+    /\b([a-zA-Z_][a-zA-Z0-9_]*)\.aleo\/([a-zA-Z_][a-zA-Z0-9_]*)\b/g,
+    (_, programName: string, structName: string) =>
+      GetExternalStructAlias(programName, structName)
+  );
 }
 
 // Resolve import return types

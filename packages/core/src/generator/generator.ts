@@ -42,9 +42,11 @@ import {
   GetLeoMappingFuncName,
   GetContractClassName,
   GetExternalRecordAlias,
+  GetExternalStructAlias,
   GetProgramTransitionsTypeName
 } from './leo-naming';
 import {
+  AliasExternalStructDataType,
   FormatLeoDataType,
   GenerateTSImport,
   InferJSDataType,
@@ -69,6 +71,14 @@ class Generator {
   constructor(aleoReflection: AleoReflection, params?: GeneratorParams) {
     this.refl = aleoReflection;
     this.programParams = params;
+  }
+
+  private formatGeneratedType(type: string): string {
+    if (IsLeoExternalStruct(type)) {
+      return AliasExternalStructDataType(type);
+    }
+
+    return FormatLeoDataType(type);
   }
 
   // Generate code for types file
@@ -244,17 +254,26 @@ class Generator {
       .join('\n');
   }
   private generateExternalStructImports(): string {
-    const externalStructs = new Set(
-      this.refl.functions.flatMap((f) => {
-        return f.inputs
+    const externalStructs = new Set([
+      ...this.refl.functions.flatMap((f) =>
+        f.inputs
           .map((i) => i.val)
           .filter((i) => !i.endsWith('future'))
-          .filter((input) => IsLeoExternalStruct(input));
-      })
-    );
+          .filter((input) => IsLeoExternalStruct(input))
+      ),
+      ...this.refl.functions.flatMap((f) =>
+        f.outputs
+          .filter((output) => !output.endsWith('future'))
+          .filter((output) => IsLeoExternalStruct(output))
+      ),
+      ...this.refl.mappings
+        .flatMap((mapping) => [mapping.key, mapping.value])
+        .filter((type) => IsLeoExternalStruct(type))
+    ]);
 
     const imports = Array.from(externalStructs).flatMap<{
       type: string;
+      alias: string;
       from: string;
     }>((externalStruct) => {
       const parts = externalStruct.split('.aleo/');
@@ -262,26 +281,43 @@ class Generator {
       const structName = getNestedType(
         FormatLeoDataType(externalStruct).split('.')[0]
       )[0];
+      const aliasedStructName = GetExternalStructAlias(programName, structName);
 
       return [
-        { type: structName, from: `./types/${programName}` },
+        {
+          type: structName,
+          alias: aliasedStructName,
+          from: `./types/${programName}`
+        },
         {
           type: GetConverterFunctionName(structName, 'leo'),
+          alias: GetConverterFunctionName(aliasedStructName, 'leo'),
           from: `./js2leo/${programName}`
+        },
+        {
+          type: GetConverterFunctionName(structName, 'js'),
+          alias: GetConverterFunctionName(aliasedStructName, 'js'),
+          from: `./leo2js/${programName}`
         }
       ];
     });
 
-    const grouppedImports: Map<string, Array<string>> = new Map();
+    const grouppedImports: Map<string, Map<string, string>> = new Map();
 
-    imports.forEach(({ type, from }) => {
-      const arr = grouppedImports.get(from) || [];
-      arr.push(type);
+    imports.forEach(({ type, alias, from }) => {
+      const arr = grouppedImports.get(from) || new Map<string, string>();
+      arr.set(type, alias);
       grouppedImports.set(from, arr);
     });
 
     return Array.from(grouppedImports.entries())
-      .map((entry) => GenerateTSImport(entry[1], entry[0]))
+      .map(([from, grouped]) =>
+        GenerateTSImport(
+          Array.from(grouped.keys()),
+          from,
+          Array.from(grouped.values())
+        )
+      )
       .join('\n');
   }
 
@@ -429,7 +465,7 @@ class Generator {
     func.inputs.forEach((input) => {
       // Generate argument array
       const isExternalRecord = IsLeoExternalRecord(input.val);
-      const leoType = FormatLeoDataType(input.val).split('.')[0];
+      const leoType = this.formatGeneratedType(input.val).split('.')[0];
       const [nestedType] = getNestedType(leoType);
       const jsType = isExternalRecord
         ? InferExternalRecordInputDataType(input.val)
@@ -490,7 +526,7 @@ class Generator {
     const returnValues: { type: string; converterFunction: string }[] = [];
     if (funcOutputs.length > 0) {
       funcOutputs.forEach((output) => {
-        const formattedOutput = FormatLeoDataType(output);
+        const formattedOutput = this.formatGeneratedType(output);
 
         // cast non-custom datatype to string
         const type = formattedOutput.split('.')[0];
@@ -581,7 +617,7 @@ class Generator {
       .setIsExported(false);
 
     // Generate argument array
-    const leoType = FormatLeoDataType(mapping.key).split('.')[0];
+    const leoType = this.formatGeneratedType(mapping.key).split('.')[0];
     const jsType = InferJSDataType(leoType);
 
     const argName = 'key';
@@ -609,9 +645,9 @@ class Generator {
     // Add zkRun statement
     fnGenerator.addStatement(GenerateZkMappingCode(mapping.name));
 
-    const leoReturnType = mapping.value.split('.')[0];
+    const leoReturnType = this.formatGeneratedType(mapping.value).split('.')[0];
     const result = GenerateTypeConversionStatement(
-      mapping.value,
+      this.formatGeneratedType(mapping.value),
       'result',
       STRING_JS
     );

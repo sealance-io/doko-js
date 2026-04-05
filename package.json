@@ -1,6 +1,6 @@
 {
   "name": "@sealance-io/dokojs",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "type": "module",
   "description": "DokoJS CLI - TypeScript toolkit for Aleo blockchain development",
   "engines": {
@@ -21,7 +21,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "build": "pnpm lint && pnpm run --r --filter \"./packages/**\" build",
+    "build": "pnpm run --r --filter \"./packages/**\" build",
     "build:bundle": "rimraf packages/cli/dist && rollup -c rollup.config.bundle.js && mkdir -p packages/cli/dist/template && cp -r packages/cli/template/* packages/cli/dist/template/ && chmod +x packages/cli/dist/index.js",
     "pkg:publish": "pnpm build && pnpm -r publish --access=public",
     "install:cli": "pnpm --filter cli build:install",

@@ -66,3 +66,10 @@ export function GetExternalRecordAlias(
 ) {
   return `${programName}_${recordName}`;
 }
+
+export function GetExternalStructAlias(
+  programName: string,
+  structName: string
+) {
+  return `${programName}_${structName}`;
+}

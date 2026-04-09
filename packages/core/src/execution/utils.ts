@@ -136,27 +136,11 @@ async function deployAleo(
     aleoCode,
     aleoFilesDir
   );
-  const priorityFee = config.priorityFee || 0;
-
-  // const cmd = `cd ${projectDir} && snarkos developer deploy "${config.appName}.aleo" --path . --priority-fee ${priorityFee}  --private-key ${config.privateKey} --query ${nodeEndPoint} --dry-run`;
-  // const { stdout } = await execute(cmd);
-  // const result = new SnarkStdoutResponseParser().parse(stdout);
-  // await broadcastTransaction(
-  //   result.transaction as Transaction,
-  //   nodeEndPoint,
-  //   config.networkName!
-  // );
-  // return new SnarkDeployResponse(
-  //   result.transaction as Transaction,
-  //   config
-  // );
   const cmd = leoDeployCommand(
     projectDir,
     config.privateKey,
     nodeEndPoint,
-    config.networkName,
-    priorityFee,
-    true
+    config.networkName
   );
   DokoJSLogger.debug(cmd);
   const { stdout } = await execute(cmd);
@@ -195,8 +179,6 @@ export const snarkDeploy = async ({
     });
   }
 
-  const priorityFee = config.priorityFee || 0;
-
   const isProgramDeployed = await checkDeployment(
     `${nodeEndPoint}/${config.networkName}/program/${config.appName}.aleo`
   );
@@ -209,14 +191,11 @@ export const snarkDeploy = async ({
 
   DokoJSLogger.info(`Deploying program ${config.appName}`);
 
-  // const cmd = `cd ${config.contractPath}/build && leo deploy --priority-fee ${priorityFee}  --private-key ${config.privateKey} --endpoint ${nodeEndPoint} --network ${config.networkName}`;
-  // const cmd = `cd ${config.contractPath} && leo deploy --priority-fee ${priorityFee}  --private-key ${config.privateKey} --endpoint ${nodeEndPoint} --network ${config.networkName} --yes`;
   const cmd = leoDeployCommand(
     config.contractPath,
     config.privateKey,
     nodeEndPoint,
-    config.networkName,
-    priorityFee
+    config.networkName
   );
   DokoJSLogger.debug(cmd);
 
@@ -238,11 +217,9 @@ export const leoDeployCommand = (
   path: string,
   privateKey: string,
   endpoint: string,
-  network: string = 'testnet',
-  priorityFee: number = 0,
-  noBuild: boolean = false
+  network: string = 'testnet'
 ) => {
-  return `cd ${path} && leo deploy --home ${ALEO_REGISTRY_DIR} --priority-fee ${priorityFee}  --private-key ${privateKey} --endpoint ${endpoint} --network ${network} --yes ${noBuild ? '--no-build' : ''}`;
+  return `cd ${path} && leo deploy --home ${ALEO_REGISTRY_DIR} --private-key ${privateKey} --endpoint ${endpoint} --network ${network} --yes`;
 };
 
 export const transactionHashToTransactionResponseObject = (

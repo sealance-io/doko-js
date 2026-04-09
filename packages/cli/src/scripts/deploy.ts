@@ -50,16 +50,13 @@ async function deploy(
   const privateKey = networkConfig.accounts[privateKeyIndex];
   const nodeEndPoint = networkConfig.endpoint;
   const deployPath = getBuildPath(programName);
-  const priorityFee = 0;
 
   const command = leoDeployCommand(
     deployPath,
     privateKey,
     nodeEndPoint,
-    network,
-    priorityFee
+    network
   );
-  // `cd ${deployPath} && leo deploy --priority-fee ${priorityFee}  --private-key ${privateKey} --endpoint ${nodeEndPoint} --network ${network} --yes`;
 
   const userShell = new Shell(command);
 

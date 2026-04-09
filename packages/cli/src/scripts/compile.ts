@@ -228,7 +228,7 @@ async function buildProgram(
   const aleoConfig = await getAleoConfig();
   const defaultNetwork = aleoConfig['defaultNetwork'];
 
-  const createLeoCommand = `mkdir -p "${artifactDir}" && cd "${artifactDir}" && leo new ${programNameWithoutPath} --endpoint ${aleoConfig.networks[defaultNetwork].endpoint} && rm "${programDir}/src/main.leo" && cp "${projectRoot}/programs/${programName}.leo" "${programDir}/src/main.leo"`;
+  const createLeoCommand = `mkdir -p "${artifactDir}" && cd "${artifactDir}" && leo new ${programNameWithoutPath} && rm "${programDir}/src/main.leo" && cp "${projectRoot}/programs/${programName}.leo" "${programDir}/src/main.leo"`;
   const leoShellCommand = new Shell(createLeoCommand);
   await leoShellCommand.asyncExec();
 

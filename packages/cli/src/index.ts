@@ -16,7 +16,7 @@ import { deploy } from '@/scripts/deploy';
 import { leoExecute } from '@/scripts/execute';
 
 // Hardcode version to avoid runtime file read issues with bundled distribution
-const pkg = { version: '1.0.0' };
+const pkg = { version: '1.0.8' };
 
 const setLogLevel = (logLevel: string | number) => {
   DokoJSLogger.setLogLevel(logLevel || DokoJSLogger.LogLevels.INFO);

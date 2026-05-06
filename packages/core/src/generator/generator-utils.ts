@@ -11,6 +11,32 @@ import { GetConverterFunctionName, GetExternalStructAlias } from './leo-naming';
 import { DokoJSError, ERRORS } from '@doko-js/utils';
 import { STRING_JS } from './string-constants';
 
+const IDENTIFIER_TYPE = 'identifier';
+const DYNAMIC_RECORD_TYPE = 'dynamic';
+const DYNAMIC_RECORD_INPUT_TYPE = 'DynamicRecordInput';
+const DYNAMIC_RECORD_VALUE_TYPE = 'Record<string, unknown> | string';
+
+function IsLeoDynamicRecordType(type: string) {
+  return type === DYNAMIC_RECORD_TYPE;
+}
+
+function stringifyDynamicLeoValue(input: string) {
+  return `js2leo.serializeDynamicRecord(${input})`;
+}
+
+function GetPrimitiveConversionFunctionReference(
+  type: string,
+  conversionTo: string
+) {
+  const namespace = conversionTo === 'js' ? 'leo2js' : 'js2leo';
+
+  if (type === IDENTIFIER_TYPE) {
+    return `${namespace}.${type}`;
+  }
+
+  return `${namespace}.${type}`;
+}
+
 export function generateArgType(type: string, depth: number): string {
   for (let i = 0; i < depth; i++) {
     type = `Array<${type}>`;
@@ -20,9 +46,14 @@ export function generateArgType(type: string, depth: number): string {
 export function InferJSDataType(type: string): string {
   if(IsLeoArray(type)) {
     const [nestedType, depth] = getNestedType(type);
-    const tsType = ConvertToJSType(nestedType) || nestedType;
+    const tsType = IsLeoDynamicRecordType(nestedType)
+      ? DYNAMIC_RECORD_VALUE_TYPE
+      : ConvertToJSType(nestedType) || nestedType;
     const argType = generateArgType(tsType, depth);
     return argType;
+  }
+  if (IsLeoDynamicRecordType(type)) {
+    return DYNAMIC_RECORD_VALUE_TYPE;
   }
   if (
     IsLeoPrimitiveType(type) ||
@@ -36,6 +67,20 @@ export function InferJSDataType(type: string): string {
       });
   }
   return type;
+}
+
+export function InferJSInputDataType(type: string): string {
+  if (IsLeoArray(type)) {
+    const [nestedType, depth] = getNestedType(type);
+    const tsType = IsLeoDynamicRecordType(nestedType)
+      ? `${DYNAMIC_RECORD_INPUT_TYPE} | string`
+      : ConvertToJSType(nestedType) || nestedType;
+    return generateArgType(tsType, depth);
+  }
+  if (IsLeoDynamicRecordType(type)) {
+    return `${DYNAMIC_RECORD_INPUT_TYPE} | string`;
+  }
+  return InferJSDataType(type);
 }
 
 export function GenerateAsteriskTSImport(location: string, alias: string) {
@@ -75,6 +120,12 @@ export function GenerateTypeConversionStatement(
   // Split qualifier private/public
   const [type, qualifier] = leoType.split('.');
 
+  if (IsLeoDynamicRecordType(type)) {
+    return conversionTo === 'leo'
+      ? `typeof ${inputField} === 'string' ? ${inputField} : ${stringifyDynamicLeoValue(inputField)}`
+      : inputField;
+  }
+
   // Determine member conversion function
   const conversionFnName = GetConverterFunctionName(type, conversionTo);
 
@@ -84,8 +135,12 @@ export function GenerateTypeConversionStatement(
 
   if (IsLeoArray(type)) {
     const [nestedType, depth] = getNestedType(type);
-    const conversionFn = IsLeoPrimitiveType(nestedType)
-      ? `${namespace}.${nestedType}`
+    const conversionFn = IsLeoDynamicRecordType(nestedType)
+      ? conversionTo === 'leo'
+        ? `(value: ${DYNAMIC_RECORD_INPUT_TYPE} | string) => typeof value === 'string' ? value : ${stringifyDynamicLeoValue('value')}`
+        : '(value: Record<string, unknown> | string) => value'
+      : IsLeoPrimitiveType(nestedType)
+        ? GetPrimitiveConversionFunctionReference(nestedType, conversionTo)
       : GetConverterFunctionName(nestedType, conversionTo);
     if (depth === 1) {
       fn = `${namespace}.${conversionFnName}(${inputField}, ${conversionFn})`;
@@ -113,7 +168,11 @@ export function GenerateTypeConversionStatement(
   // if this is not a custom type we have to use the
   // conversion function from namespace
   else if (IsLeoPrimitiveType(type)) {
-    fn = `${namespace}.${fn}`;
+    if (type === IDENTIFIER_TYPE) {
+      fn = `${namespace}.${fn}`;
+    } else {
+      fn = `${namespace}.${fn}`;
+    }
 
     if (conversionTo === 'leo') {
       if (qualifier) {
@@ -130,6 +189,10 @@ export function GetTypeConversionFunctionsJS(leoType: string) {
   // Split qualifier private/public
   const [type, qualifier] = leoType.split('.');
 
+  if (IsLeoDynamicRecordType(type)) {
+    return ['(value: Record<string, unknown> | string) => value'];
+  }
+
   const functions = [];
   // Determine member conversion function
   const namespace = 'leo2js';
@@ -138,13 +201,25 @@ export function GetTypeConversionFunctionsJS(leoType: string) {
 
   const isLeoType = isArray || IsLeoPrimitiveType(type);
   functions.push(
-    isLeoType ? `${namespace}.${conversionFnName}` : conversionFnName
+    (isArray || IsLeoPrimitiveType(type) || IsLeoDynamicRecordType(type))
+      ? IsLeoPrimitiveType(type)
+        ? GetPrimitiveConversionFunctionReference(type, STRING_JS)
+        : IsLeoDynamicRecordType(type)
+          ? '(value: Record<string, unknown> | string) => value'
+        : `${namespace}.${conversionFnName}`
+      : conversionFnName
   );
 
   if (isArray) {
     // Pass additional conversion function
-    const [dataType, size] = GetLeoArrTypeAndSize(type);
-    functions.push(`${namespace}.${dataType}`);
+    const [dataType] = GetLeoArrTypeAndSize(type);
+    functions.push(
+      IsLeoPrimitiveType(dataType)
+        ? GetPrimitiveConversionFunctionReference(dataType, STRING_JS)
+        : IsLeoDynamicRecordType(dataType)
+          ? '(value: Record<string, unknown> | string) => value'
+        : `${namespace}.${dataType}`
+    );
   }
   return functions;
 }

@@ -50,6 +50,7 @@ import {
   FormatLeoDataType,
   GenerateTSImport,
   InferJSDataType,
+  InferJSInputDataType,
   GenerateTypeConversionStatement,
   GenerateZkRunCode,
   GenerateZkMappingCode,
@@ -469,7 +470,7 @@ class Generator {
       const [nestedType] = getNestedType(leoType);
       const jsType = isExternalRecord
         ? InferExternalRecordInputDataType(input.val)
-        : InferJSDataType(leoType);
+        : InferJSInputDataType(leoType);
  
       // Create argument for each parameter of function
       const argName = input.key;
@@ -477,7 +478,7 @@ class Generator {
 
       const argType = isExternalRecord
         ? InferExternalRecordInputDataType(input.val)
-        : InferJSDataType(leoType);
+        : InferJSInputDataType(leoType);
 
       args.push({ name: argName, type: argType });
 
@@ -727,6 +728,7 @@ class Generator {
       GenerateTSImport(
         [
           'ContractConfig',
+          'DynamicRecordInput',
           'zkGetMapping',
           'LeoAddress',
           'LeoRecord',

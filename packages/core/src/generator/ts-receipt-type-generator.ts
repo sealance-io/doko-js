@@ -20,6 +20,8 @@ class TSReceiptTypeGenerator {
         return 'tx.PrivateOutput';
       case 'external_record':
         return 'tx.ExternalRecordOutput';
+      case 'record_dynamic':
+        return 'tx.DynamicRecordOutput';
       case 'future':
         return 'tx.FutureOutput';
       case 'record':

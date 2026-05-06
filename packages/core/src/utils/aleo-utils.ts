@@ -80,6 +80,7 @@ const ALEO_TO_JS_TYPE_MAPPING = new Map([
   ['boolean', 'boolean'],
   ['field', 'bigint'],
   ['group', 'bigint'],
+  ['identifier', 'string'],
   ['i8', 'number'],
   ['i16', 'number'],
   ['i32', 'number'],

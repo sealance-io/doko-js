@@ -7,6 +7,8 @@ import {
 } from '@/utils/aleo-utils';
 import { capitalize } from '@doko-js/utils';
 
+const DYNAMIC_RECORD_TYPE = 'dynamic';
+
 // Creates leo schema name from type
 // Eg. if schema for struct Token{} is to be generated
 // it generate it as `leoTokenSchema'
@@ -38,6 +40,7 @@ export function GenerateLeoSchemaAliasDeclaration(
 export function GetConverterFunctionName(type: string, conversionTo: string) {
   if (IsLeoPrimitiveType(type)) return type;
   else if (IsLeoArray(type)) return 'array';
+  else if (type === DYNAMIC_RECORD_TYPE) return DYNAMIC_RECORD_TYPE;
   return conversionTo == 'js' ? `get${type}` : `get${type}Leo`;
 }
 

@@ -1,6 +1,7 @@
 export const SCHEMA_IMPORT = `import { z } from "zod";
 import { 
   leoAddressSchema,
+  leoIdentifierSchema,
   leoPrivateKeySchema,
   leoViewKeySchema,
   leoTxIdSchema,
